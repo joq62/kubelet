@@ -1,0 +1,10 @@
+{application,kubelet,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[]},
+              {mod,{kubelet_app,[]}},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[kubelet,kubelet_app,kubelet_sup,lib_workers]},
+              {licenses,["Apache-2.0"]},
+              {links,[]}]}.
