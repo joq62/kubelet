@@ -21,16 +21,55 @@
 %% @end
 %%--------------------------------------------------------------------
 create_workers(NumWorkers)->
-    Node=node(),
-    NodeName="glurk",
-    {ok,NodeDir}=file:get_cwd(),
-    WhichApplications=[App||{App,_,_}<-application:which_applications()],
-    %#{id=>Id,date_time=>DateTime,state=>started_kubelet|started_workers
-    WorkerNodeEvents=[#{id=>glurk_id,date_time=>{date(),time()},state=>started_workers}],
-    WorkerNodesInfo=[#{node=>Node, nodename=>NodeName, node_dir=>NodeDir, applications=>WhichApplications, events=>WorkerNodeEvents}],
-    {ok,WorkerNodesInfo}.
+    WorkerNodeNames=worker_node_names(NumWorkers),
+    WorkerNodeInfoList=new_workers(WorkerNodeNames),
+    {ok,WorkerNodeInfoList}.
 
-
-%%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+new_workers(WorkerNodeNames)->
+    new_workers(WorkerNodeNames,[]).
+new_workers([],WorkerNodeInfoList)-> 
+    WorkerNodeInfoList;
+new_workers([WorkerNodeName|T],Acc) ->
+    {ok,WorkerNode,WorkerDir,WorkerNodeName}=new_worker(WorkerNodeName),
+    WorkerNodeEvents=[#{id=>WorkerNode,date_time=>{date(),time()},state=>started_worker}],
+    WorkerNodeInfo=#{node=>WorkerNode, nodename=>WorkerNodeName, node_dir=>WorkerDir, applications=>[], events=>WorkerNodeEvents},
+    new_workers(T,[WorkerNodeInfo|Acc]).
+
+new_worker(WorkerNodeName)->
+    {ok,HostName}=net:gethostname(),
+    CookieStr=lib_kubelet_cmn:cookie_str(),    
+    WorkerDir=lib_kubelet_cmn:worker_dir(WorkerNodeName),
+    file:del_dir_r(WorkerDir),
+    ok=file:make_dir(WorkerDir),
+
+    {ok,WorkerNode}=slave:start(HostName,WorkerNodeName,"-setcookie "++CookieStr),
+    pong=net_adm:ping(WorkerNode),
+    timer:sleep(500),
+    {ok,WorkerNode,WorkerDir,WorkerNodeName}.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+worker_node_names(NumWorkers)->
+    worker_node_names(NumWorkers,[]).
+worker_node_names(0,NodeNames)->
+    NodeNames;
+worker_node_names(N,Acc) ->
+    NodeName=worker_node_name(N),
+    worker_node_names(N-1,[NodeName|Acc]).
+
+worker_node_name(N)->
+    CookieStr=lib_kubelet_cmn:cookie_str(),    
+    NStr=integer_to_list(N),
+    NStr++"_"++CookieStr.

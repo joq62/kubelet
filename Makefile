@@ -6,6 +6,7 @@ all:
 	rm -rf logs;
 	rm -rf ebin
 	rm -rf rebar.lock;
+	rm -rf kubelet_a.kubelet_dir;
 #	mkdir ebin;		
 	rebar3 compile;	
 #	cp _build/default/lib/*/ebin/* ebin;
@@ -32,6 +33,7 @@ no_ebin_commit:
 	rm -rf _build;
 	rm -rf ebin;
 	rm -rf rebar.lock
+	rm -rf kubelet_a.kubelet_dir;
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;
@@ -64,7 +66,8 @@ with_ebin_commit:
 	#INFO: Deleting files and dirs created during builds
 	rm -rf _build;
 	rm -rf ebin;
-	rm -rf rebar.lock
+	rm -rf rebar.lock;
+	rm -rf kubelet_a.kubelet_dir;
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;
@@ -93,7 +96,8 @@ build:
 	#INFO: Deleting files and dirs created during builds
 	rm -rf _build;
 	rm -rf ebin;
-	rm -rf rebar.lock
+	rm -rf rebar.lock;
+	rm -rf kubelet_a.kubelet_dir;
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;
@@ -120,7 +124,8 @@ clean:
 	#INFO: Deleting files and dirs created during builds
 	rm -rf _build;
 	rm -rf ebin;
-	rm -rf rebar.lock
+	rm -rf rebar.lock;
+	rm -rf kubelet_a.kubelet_dir;
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;

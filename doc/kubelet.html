@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module kubelet</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module kubelet</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul> 
+Kubelet is the prime node for the cluster at the each node 
+--------------- Functionality ----------------------- 
+- create , monitor and delete worker nodes 
+- create and delete worker nodes directories 
+- load, start , stop, unload and monitor applications on worker nodes 
+- monitor worker node is using erlang:monitor_node(Node) and handles   
+the signal {nodedown,Node}.
+<p>Copyright © (C) 2023, c50</p>
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+<p><b>Authors:</b> c50 (<a href="mailto:joq62@c50"><tt>joq62@c50</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p> 
+Kubelet is the prime node for the cluster at the each node 
+--------------- Functionality ----------------------- 
+- create , monitor and delete worker nodes 
+- create and delete worker nodes directories 
+- load, start , stop, unload and monitor applications on worker nodes 
+- monitor worker node is using erlang:monitor_node(Node) and handles   
+the signal {nodedown,Node}.   
+Actions when detecting the  signal {nodedown,Node}   
+1. Delete and create worker node Node's directory   
+2. Start and monitor  worker node Node   
+3. Check which applications Applications that were allocated on the Node   
+4. Load and start Applications</p>
+
+ <p>------------------- Data ---------------------</p>
+
+  <p>WorkerNode = #{node=&gt;Node, nodename=&gt;NodeName, node_dir=&gt;NodeDir, applications=&gt;[Application], events=&gt;[WorkerNodeEvents]}  
+Application = #{application=&gt;ApplName,app=&gt;App,git_path=&gt;GitPath,events=&gt;ApplicationStatus}  
+WorkerNodeEvent=#{id=&gt;Id,date_time=&gt;DateTime,state=&gt;started_kubelet|started_workers  
+ApplicationEvent= #{id=&gt;Id,date_time=&gt;DateTime,state=&gt;loaded|started|stopped|unloaded|restarted|schduled</p>
+
+
+ <p>------------------ State ---------------------- 
+started_kubelet: kubelete node is started and kubelet node dir is createde 
+started_workers: Acted on signal create(NumWorkerNodes), started NumberWorkerNodes worker nodes        
+and corresponding dirs.</p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#create_workers-1">create_workers/1</a></td><td>
+  Creates NumWorkers worker nodes in the kubelet_node dir.</td></tr>
+<tr><td valign="top"><a href="#delete_application-1">delete_application/1</a></td><td>
+  Load and start the application ApplicationId on the worker node that has least applications.</td></tr>
+<tr><td valign="top"><a href="#deploy_application-1">deploy_application/1</a></td><td>
+  Load and start the application ApplicationId on the worker node that has least applications.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td>.</td></tr>
+<tr><td valign="top"><a href="#ping-0">ping/0</a></td><td>
+  Check if a gen_server is running.</td></tr>
+<tr><td valign="top"><a href="#start-0">start/0</a></td><td>.</td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>
+  Starts the server.</td></tr>
+<tr><td valign="top"><a href="#stop-0">stop/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#which_applications-0">which_applications/0</a></td><td>
+  Returns list of running applications on all worker nodes.</td></tr>
+<tr><td valign="top"><a href="#which_workers-0">which_workers/0</a></td><td>
+  Returns list of running Worker nodes.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="create_workers-1">create_workers/1</a></h3>
+<div class="spec">
+<p><tt>create_workers(NumWorkers::integer()) -&gt; ok | {error, Reason::term()}</tt><br></p>
+<p> </p>
+</div><p>
+  Creates NumWorkers worker nodes in the kubelet_node dir</p>
+
+<h3 class="function"><a name="delete_application-1">delete_application/1</a></h3>
+<div class="spec">
+<p><tt>delete_application(X1::{ApplicationId::string(), WorkerNode::node()}) -&gt; ok | {error, Reason::term()}</tt><br></p>
+<p> </p>
+</div><p>
+  Load and start the application ApplicationId on the worker node that has least applications</p>
+
+<h3 class="function"><a name="deploy_application-1">deploy_application/1</a></h3>
+<div class="spec">
+<p><tt>deploy_application(ApplicationId::string()) -&gt; {ok, {ApplicationId::string(), WorkerNode::node()}} | {error, Reason::term()}</tt><br></p>
+<p> </p>
+</div><p>
+  Load and start the application ApplicationId on the worker node that has least applications</p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(UnMatchedSignal, From, State) -&gt; any()</tt></p>
+<p> </p>
+</div><p>
+ </p>
+
+<h3 class="function"><a name="ping-0">ping/0</a></h3>
+<div class="spec">
+<p><tt>ping() -&gt; pong | {error, Reason::term()}</tt><br></p>
+<p> </p>
+</div><p>
+  Check if a gen_server is running</p>
+
+<h3 class="function"><a name="start-0">start/0</a></h3>
+<div class="spec">
+<p><tt>start() -&gt; any()</tt></p>
+<p> </p>
+</div><p>
+ </p>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; {ok, Pid::pid()} | {error, Error::{already_started, pid()}} | {error, Error::term()} | ignore</tt><br></p>
+<p> </p>
+</div><p>
+  Starts the server</p>
+
+<h3 class="function"><a name="stop-0">stop/0</a></h3>
+<div class="spec">
+<p><tt>stop() -&gt; any()</tt></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="which_applications-0">which_applications/0</a></h3>
+<div class="spec">
+<p><tt>which_applications() -&gt; [{ApplicationId::string(), WorkerNode::node()}]</tt><br></p>
+<p> </p>
+</div><p>
+  Returns list of running applications on all worker nodes</p>
+
+<h3 class="function"><a name="which_workers-0">which_workers/0</a></h3>
+<div class="spec">
+<p><tt>which_workers() -&gt; WorkerNodesInfo::term()</tt><br></p>
+<p> </p>
+</div><p>
+  Returns list of running Worker nodes</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

@@ -166,6 +166,10 @@ init([]) ->
     [rd:add_target_resource_type(TargetType)||TargetType<-?TargetTypes],
     rd:trade_resources(),
       
+    KubeletDir=lib_kubelet_cmn:kubelet_dir(), 
+    file:del_dir_r(KubeletDir),
+    ok=file:make_dir(KubeletDir),
+    
     ?LOG_NOTICE("Server started ",[?MODULE]),
     
     {ok, #state{}}.

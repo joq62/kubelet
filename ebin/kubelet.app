@@ -5,6 +5,7 @@
               {mod,{kubelet_app,[]}},
               {applications,[kernel,stdlib]},
               {env,[]},
-              {modules,[kubelet,kubelet_app,kubelet_sup,lib_workers]},
+              {modules,[kubelet,kubelet_app,kubelet_sup,lib_kubelet_cmn,
+                        lib_workers]},
               {licenses,["Apache-2.0"]},
               {links,[]}]}.

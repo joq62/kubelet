@@ -25,7 +25,10 @@
 %%--------------------------------------------------------------------
 start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok=common_tests(),
     ok=create_which_tests(),
+    ok=check_connections(),
+   
     
     io:format("Test Suit succeded OK !!! ~p~n",[?MODULE]),
     ok.
@@ -38,10 +41,42 @@ start()->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-create_which_tests()->
+check_connections()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    
+    ['1_a@c50','2_a@c50','3_a@c50','4_a@c50','5_a@c50']=lists:sort(nodes()),
+    ['2_a@c50','3_a@c50','4_a@c50','5_a@c50','kubelet_a@c50']=lists:sort(rpc:call('1_a@c50',erlang,nodes,[],5000)),
+    ok.
 
-    %% Normal 
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+common_tests()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    
+    WorkerNodeName="1_a",
+    ApplicationId="apollo_11",
+
+    "a"=lib_kubelet_cmn:cookie_str(),    
+    "kubelet_a"=lib_kubelet_cmn:kubelet_nodename(),    
+    "kubelet_a.kubelet_dir"=lib_kubelet_cmn:kubelet_dir(),    
+    '1_a_worker@c50'=lib_kubelet_cmn:worker_node(WorkerNodeName),    
+    WorkerDir=lib_kubelet_cmn:worker_dir(WorkerNodeName), 
+    "kubelet_a.kubelet_dir/1_a.worker_dir"=WorkerDir,
+    "kubelet_a.kubelet_dir/1_a.worker_dir/apollo_11.application_dir"=lib_kubelet_cmn:application_dir(WorkerDir,ApplicationId),
+
+    ok.
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+create_which_tests()->
+      io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     ok=kubelet:create_workers(?NumWorkers),
   %  {ok,
   %   [#{applications=>[kubelet,etcd,mnesia,rd,log,stdlib,kernel],
@@ -52,7 +87,4 @@ create_which_tests()->
  %    ]
     {ok,WorkerNodesInfo}=kubelet:which_workers(),
     {error,["Already created ",WorkerNodesInfo]}=kubelet:create_workers(?NumWorkers),
-
-
-
     ok.
