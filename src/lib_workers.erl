@@ -12,6 +12,7 @@
 -export([
 	 
 	 get_candidate/1,
+	 get_candidate/2,
 	 create_workers/1,
 	 new_worker/1,
 	 update_worker_info/2
@@ -31,6 +32,36 @@ update_worker_info(WorkeInfo,WorkerList)->
 	   WorkerNode=/=maps:get(node,M)],
     [WorkeInfo|L1].
 
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+get_candidate(WorkerNodeInfoList,ApplicationId)->
+    Result=case get_candidates(WorkerNodeInfoList,ApplicationId,[]) of
+	       []->
+		   {error,["No candidates are available, use another Host",?MODULE,?LINE]};
+	       [Candidate|_]->
+		   {ok,Candidate}
+	   end,
+    Result.
+
+get_candidates([],_,Acc)->
+    L1=lists:keysort(1,Acc),
+    [M||{_,M}<-L1];
+get_candidates([WorkerNodeInfo|T],ApplicationId,Acc)->
+    ApplicationMaps=maps:get(applications,WorkerNodeInfo),
+    Member=[Map||Map<-ApplicationMaps,
+		 lists:member(ApplicationId,maps:values(Map))],
+    case Member of
+	[]->
+	    NewAcc=[{ApplicationMaps,WorkerNodeInfo}|Acc];
+	_ ->
+	    NewAcc=Acc
+    end,
+    get_candidates(T,ApplicationId,NewAcc).
+	
+    
 %%--------------------------------------------------------------------
 %% @doc
 %% 

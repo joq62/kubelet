@@ -24,7 +24,6 @@
 %% WorkerNode = #{node=>Node, nodename=>NodeName, node_dir=>NodeDir, applications=>[Application], events=>[WorkerNodeEvents]}
 %% Application = #{application=>ApplName,app=>App,git_path=>GitPath,event=>ApplicationStatus} 
 deploy(ApplicationId,Candidate)->
-    
     {ok,App}=etcd_application:get_app(ApplicationId),
     {ok,GitPath}=etcd_application:get_git_path(ApplicationId),
     ApplicationEvent=#{id=>ApplicationId,date_time=>{date(),time()},status=>started},

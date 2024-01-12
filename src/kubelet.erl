@@ -228,17 +228,21 @@ handle_call({which_workers}, _From, State) when State#state.worker_node_info == 
 %%--------------------------------------------------------------------
 
 handle_call({deploy_application,ApplicationId}, _From, State) when State#state.worker_node_info =/= undefined->
-    {ok,Candidate}=lib_workers:get_candidate(State#state.worker_node_info),
-    Result=try lib_application:deploy(ApplicationId,Candidate) of
-	       {ok,UpdatedCandidateInfo}->
-		   {ok,UpdatedCandidateInfo}
-	   catch
-	       error:Reason:Stacktrace->
-		   {error,Reason,Stacktrace,?MODULE,?LINE};
-	       throw:Reason:Stacktrace->
-		   {throw,Reason,Stacktrace,?MODULE,?LINE};
-	       Event:Reason:Stacktrace ->
-		   {Event,Reason,Stacktrace,?MODULE,?LINE}
+    Result=case lib_workers:get_candidate(State#state.worker_node_info,ApplicationId) of
+	       {error,Reason}->
+		   {error,Reason};
+	       {ok,Candidate}->
+		   try lib_application:deploy(ApplicationId,Candidate) of
+		       {ok,UpdatedCandidateInfo}->
+			   {ok,UpdatedCandidateInfo}
+		   catch
+		       error:Reason:Stacktrace->
+			   {error,Reason,Stacktrace,?MODULE,?LINE};
+		       throw:Reason:Stacktrace->
+			   {throw,Reason,Stacktrace,?MODULE,?LINE};
+		       Event:Reason:Stacktrace ->
+			   {Event,Reason,Stacktrace,?MODULE,?LINE}
+		   end
 	   end,
     Reply=case Result of
 	      {ok,WorkerInfo}->

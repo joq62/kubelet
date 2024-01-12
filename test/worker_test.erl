@@ -50,16 +50,16 @@ start()->
     %%% 
 
     {ok,WorkerNodeInfoList}=kubelet:which_workers(),
-    {ok,Candidate}=lib_workers:get_candidate(WorkerNodeInfoList),
+    {ok,Candidate}=lib_workers:get_candidate(WorkerNodeInfoList,ApplicationId),
         
     E1=lists:append([maps:to_list(M)||M<-maps:get(events,Candidate)]),
-    [{date_time,_},{id,'5_a@c50'},{state,started_worker}]=lists:sort(E1),
+    [{date_time,_},{id,'1_a@c50'},{state,started_worker}]=lists:sort(E1),
 
     [{applications,[]},
      {events,_},
-     {node,'5_a@c50'},
-     {node_dir,"kubelet_a.kubelet_dir/5_a.worker_dir"},
-     {nodename,"5_a"}
+     {node,'1_a@c50'},
+     {node_dir,"kubelet_a.kubelet_dir/1_a.worker_dir"},
+     {nodename,"1_a"}
     ]=lists:sort(maps:to_list(Candidate)),
     
     
@@ -73,8 +73,7 @@ deploy(0,_)->
     io:format("NewWorkerNodeInfoList ~p~n",[{NewWorkerNodeInfoList,?MODULE,?FUNCTION_NAME,?LINE}]);
 
 deploy(N,ApplicationId) ->
-    ok=kubelet:deploy_application(ApplicationId),
-    io:format("N ~p~n",[{N,?MODULE,?FUNCTION_NAME,?LINE}]),
+    io:format("N, kubelet:deploy_application(ApplicationId)  ~p~n",[{N,kubelet:deploy_application(ApplicationId),?MODULE,?FUNCTION_NAME,?LINE}]),
     deploy(N-1,ApplicationId).
 
 %% Description: Based on hosts.config file checks which hosts are avaible
