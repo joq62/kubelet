@@ -28,7 +28,10 @@ start()->
     ok=common_tests(),
     ok=create_which_tests(),
     ok=check_connections(),
-   
+
+    ok=load_start_infra_test(),
+
+    ok=stop_restart_node_test(),
     
     io:format("Test Suit succeded OK !!! ~p~n",[?MODULE]),
     ok.
@@ -36,6 +39,57 @@ start()->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% ----------------------
+ load_start_infra_test()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    ApplicationId="adder",
+    %%% 
+
+    {ok,WorkerNodeInfoList}=kubelet:which_workers(),
+    {ok,Candidate}=lib_workers:get_candidate(WorkerNodeInfoList),
+        
+    E1=lists:append([maps:to_list(M)||M<-maps:get(events,Candidate)]),
+    [{date_time,_},{id,'5_a@c50'},{state,started_worker}]=lists:sort(E1),
+
+    [{applications,[]},
+     {events,_},
+     {node,'5_a@c50'},
+     {node_dir,"kubelet_a.kubelet_dir/5_a.worker_dir"},
+     {nodename,"5_a"}
+    ]=lists:sort(maps:to_list(Candidate)),
+    
+    
+    %% ---test deployment
+    deploy(10,ApplicationId),
+    ok.
+
+
+deploy(0,_)->
+    {ok,NewWorkerNodeInfoList}=kubelet:which_workers(),
+    io:format("NewWorkerNodeInfoList ~p~n",[{NewWorkerNodeInfoList,?MODULE,?FUNCTION_NAME,?LINE}]);
+
+deploy(N,ApplicationId) ->
+    ok=kubelet:deploy_application(ApplicationId),
+    io:format("N ~p~n",[{N,?MODULE,?FUNCTION_NAME,?LINE}]),
+    deploy(N-1,ApplicationId).
+
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+stop_restart_node_test()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    
+    [NodeToKill,'2_a@c50','3_a@c50','4_a@c50','5_a@c50']=lists:sort(nodes()),
+    rpc:call(NodeToKill,init,stop,[],5000),
+    timer:sleep(3000),
+    [NodeToKill,'2_a@c50','3_a@c50','4_a@c50','5_a@c50']=lists:sort(nodes()),
+    
+ 
+    ok.
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible

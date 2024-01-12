@@ -53,7 +53,6 @@ kubelet_dir()->
 %% @end
 %%--------------------------------------------------------------------
 worker_node(WorkerNodeName)->
-    CookieStr=cookie_str(),
     {ok,HostName}=net:gethostname(),
     list_to_atom(WorkerNodeName++"_"++"worker"++"@"++HostName).
 
@@ -76,7 +75,6 @@ application_dir(WorkerDir,ApplicationId)->
     Dir=ApplicationId++"."++"application_dir",
     filename:join(WorkerDir,Dir).
    
-
 
 %%%===================================================================
 %%% Internal functions

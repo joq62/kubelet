@@ -18,7 +18,7 @@
 % ------------------- Data ---------------------
 %
 %  WorkerNode = #{node=>Node, nodename=>NodeName, node_dir=>NodeDir, applications=>[Application], events=>[WorkerNodeEvents]}
-%  Application = #{application=>ApplName,app=>App,git_path=>GitPath,events=>ApplicationStatus} 
+%  Application = #{application=>ApplName,app=>App,git_path=>GitPath,event=>ApplicationStatus} 
 %  WorkerNodeEvent=#{id=>Id,date_time=>DateTime,state=>started_kubelet|started_workers
 %  ApplicationEvent= #{id=>Id,date_time=>DateTime,state=>loaded|started|stopped|unloaded|restarted|schduled
 %
@@ -180,7 +180,6 @@ init([]) ->
 %%  
 %% @end
 %%--------------------------------------------------------------------
-% #{node=>Node, nodename=>NodeName, node_dir=>NodeDir, applications=>[Application], events=>[WorkerNodeEvents]}
 handle_call({create_workers,NumWorkers}, _From, State) when State#state.worker_node_info == undefined->
     Result=try lib_workers:create_workers(NumWorkers) of
 	       {ok,WorkerNodesInfo}->
@@ -204,7 +203,7 @@ handle_call({create_workers,NumWorkers}, _From, State) when State#state.worker_n
     
     {reply, Reply, NewState};
 
-handle_call({create_workers,NumWorkers}, _From, State) when State#state.worker_node_info =/= undefined->
+handle_call({create_workers,_NumWorkers}, _From, State) when State#state.worker_node_info =/= undefined->
     Reply={error,["Already created ",State#state.worker_node_info]},
     {reply, Reply, State};
 
@@ -228,8 +227,33 @@ handle_call({which_workers}, _From, State) when State#state.worker_node_info == 
 %% @end
 %%--------------------------------------------------------------------
 
-handle_call({deploy_application,ApplicationId}, _From, State) ->
-    Reply=pong,
+handle_call({deploy_application,ApplicationId}, _From, State) when State#state.worker_node_info =/= undefined->
+    {ok,Candidate}=lib_workers:get_candidate(State#state.worker_node_info),
+    Result=try lib_application:deploy(ApplicationId,Candidate) of
+	       {ok,UpdatedCandidateInfo}->
+		   {ok,UpdatedCandidateInfo}
+	   catch
+	       error:Reason:Stacktrace->
+		   {error,Reason,Stacktrace,?MODULE,?LINE};
+	       throw:Reason:Stacktrace->
+		   {throw,Reason,Stacktrace,?MODULE,?LINE};
+	       Event:Reason:Stacktrace ->
+		   {Event,Reason,Stacktrace,?MODULE,?LINE}
+	   end,
+    Reply=case Result of
+	      {ok,WorkerInfo}->
+		  NewWorkerNodeInfo=lib_workers:update_worker_info(WorkerInfo,State#state.worker_node_info),
+		  NewState=State#state{worker_node_info = NewWorkerNodeInfo},
+		  ok;
+	      ErrorEvent->
+		  NewState=State,
+		  {error,ErrorEvent}
+	  end,
+    {reply, Reply, NewState};  
+
+
+handle_call({deploy_application,ApplicationId}, _From, State) when State#state.worker_node_info == undefined->
+    Reply={error,["No workers are created yet , you need to call create_workers(NumWorkers) and then it's possible to deploy ",ApplicationId]},
     {reply, Reply, State};
 
 %%--------------------------------------------------------------------
@@ -238,29 +262,23 @@ handle_call({deploy_application,ApplicationId}, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 
-handle_call({delete_application,ApplicationId,WorkerNode}, _From, State) ->
-    Reply=pong,
+handle_call({delete_application,ApplicationId,WorkerNode}, _From, State) when State#state.worker_node_info == undefined->
+    Reply={error,["No workers are created yet , you need to call create_workers(NumWorkers) and then it's possible to deploy ",ApplicationId,WorkerNode]},
     {reply, Reply, State};
-
-
+  
 %%--------------------------------------------------------------------
 %% @doc
 %%  
 %% @end
 %%--------------------------------------------------------------------
 
-handle_call({which_applications}, _From, State) ->
-    Reply=pong,
+handle_call({which_applications}, _From, State)  when State#state.worker_node_info == undefined->
+    Reply={error,["No workers are created yet , you need to call create_workers(NumWorkers) "]},
     {reply, Reply, State};
-
-
-
-
 
 handle_call({ping}, _From, State) ->
     Reply=pong,
     {reply, Reply, State};
-
 
 handle_call(UnMatchedSignal, From, State) ->
     io:format("unmatched_signal ~p~n",[{UnMatchedSignal, From,?MODULE,?LINE}]),
@@ -289,21 +307,25 @@ handle_cast(UnMatchedSignal, State) ->
 	  {noreply, NewState :: term(), hibernate} |
 	  {stop, Reason :: normal | term(), NewState :: term()}.
 
+handle_info({nodedown,Node}, State) ->
+    [Map]=[R||R<-State#state.worker_node_info,
+	      Node=:=maps:get(node,R)],
 
-handle_info(timeout, State) ->
-    case lists:delete(node(),rd:fetch_resources(etcd)) of
-	[]->
-	    ?LOG_NOTICE("First Dbase Node ",[node()]),	  
-	    lib_db:dynamic_db_init([]);
-	DbEtcdResources ->
-	    io:format("DbEtcdResources ~p~n",[{node(),DbEtcdResources,?MODULE,?LINE}]),
-	    ?LOG_NOTICE("Added Dbase Node ",[node(),DbEtcdResources]),	  
-	    lib_db:dynamic_db_init(DbEtcdResources),
-	    ok
-    end,  
-    {noreply, State};
+    WorkerNode=maps:get(node,Map),
+    WorkerNodeName=maps:get(nodename,Map),
+    pang=net_adm:ping(WorkerNode),   
+    {ok,WorkerNode,_WorkerDir,WorkerNodeName}=lib_workers:new_worker(WorkerNodeName),
+    pong=net_adm:ping(WorkerNode),
+    NewWorkerEvent=#{id=>WorkerNode,date_time=>{date(),time()},state=>restarted_worker},
+    
+    WorkerEvents=[NewWorkerEvent|maps:get(events,Map)],
+    Map2=maps:put(events,WorkerEvents,Map),
+    NewState=State#state{worker_node_info=Map2},
+
+    {noreply, NewState};
 
 handle_info(Info, State) ->
+    ?LOG_WARNING("Unmatched signal ",[Info]),	  
     io:format("unmatched_signal ~p~n",[{Info,?MODULE,?LINE}]),
     {noreply, State}.
 

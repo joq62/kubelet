@@ -1,3 +1,4 @@
 %% encoding: UTF-8
 {application,kubelet}.
-{modules,[kubelet,kubelet_app,kubelet_sup,lib_kubelet_cmn,lib_workers]}.
+{modules,[kubelet,kubelet_app,kubelet_sup,lib_application,lib_kubelet_cmn,
+          lib_workers]}.
