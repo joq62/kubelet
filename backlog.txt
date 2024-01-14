@@ -1,0 +1,9 @@
+Normal case 
+* create worker nodes
+* load start rd and log on each node
+* load start test application
+
+Error cases
+* node crashes
+* sdasd
+* 

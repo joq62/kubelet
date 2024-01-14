@@ -33,7 +33,7 @@ start()->
     
    
     io:format("Test OK !!! ~p~n",[?MODULE]),
-    timer:sleep(2000),
+    timer:sleep(1000),
     init:stop(),
     ok.
 

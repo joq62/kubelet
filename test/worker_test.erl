@@ -30,7 +30,6 @@ start()->
     ok=check_connections(),
 
     ok=load_start_infra_test(),
-
     ok=stop_restart_node_test(),
     
     io:format("Test Suit succeded OK !!! ~p~n",[?MODULE]),
@@ -46,7 +45,7 @@ start()->
 %% ----------------------
  load_start_infra_test()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
-    ApplicationId="adder",
+    ApplicationId="resource_discovery",
     %%% 
 
     {ok,WorkerNodeInfoList}=kubelet:which_workers(),
@@ -64,13 +63,15 @@ start()->
     
     
     %% ---test deployment
-    deploy(10,ApplicationId),
+    deploy(6,ApplicationId),
+    [io:format("ping N ~p~n",[[{N,rpc:call(N,rd,ping,[],5000)}||N<-lists:sort(nodes())]])],
+    
     ok.
 
 
 deploy(0,_)->
-    {ok,NewWorkerNodeInfoList}=kubelet:which_workers(),
-    io:format("NewWorkerNodeInfoList ~p~n",[{NewWorkerNodeInfoList,?MODULE,?FUNCTION_NAME,?LINE}]);
+    {ok,NewWorkerNodeInfoList}=kubelet:which_workers();
+ %   io:format("NewWorkerNodeInfoList ~p~n",[{NewWorkerNodeInfoList,?MODULE,?FUNCTION_NAME,?LINE}]);
 
 deploy(N,ApplicationId) ->
     io:format("N, kubelet:deploy_application(ApplicationId)  ~p~n",[{N,kubelet:deploy_application(ApplicationId),?MODULE,?FUNCTION_NAME,?LINE}]),

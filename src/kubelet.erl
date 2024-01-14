@@ -312,20 +312,29 @@ handle_cast(UnMatchedSignal, State) ->
 	  {stop, Reason :: normal | term(), NewState :: term()}.
 
 handle_info({nodedown,Node}, State) ->
-    [Map]=[R||R<-State#state.worker_node_info,
-	      Node=:=maps:get(node,R)],
-
-    WorkerNode=maps:get(node,Map),
-    WorkerNodeName=maps:get(nodename,Map),
-    pang=net_adm:ping(WorkerNode),   
-    {ok,WorkerNode,_WorkerDir,WorkerNodeName}=lib_workers:new_worker(WorkerNodeName),
-    pong=net_adm:ping(WorkerNode),
-    NewWorkerEvent=#{id=>WorkerNode,date_time=>{date(),time()},state=>restarted_worker},
+    [WorkerNodeInfo]=[R||R<-State#state.worker_node_info,
+			 Node=:=maps:get(node,R)],
+    Result=try lib_kubelet:restart(WorkerNodeInfo) of
+	       {ok,UpdatedCandidateInfo}->
+		   {ok,UpdatedCandidateInfo}
+	   catch
+	       error:Reason:Stacktrace->
+		   {error,Reason,Stacktrace,?MODULE,?LINE};
+	       throw:Reason:Stacktrace->
+		   {throw,Reason,Stacktrace,?MODULE,?LINE};
+	       Event:Reason:Stacktrace ->
+		   {Event,Reason,Stacktrace,?MODULE,?LINE}
+	   end,
+    case Result of
+	{ok,WorkerInfo}->
+	    NewWorkerNodeInfo=lib_workers:update_worker_info(WorkerInfo,State#state.worker_node_info),
+	    NewState=State#state{worker_node_info = NewWorkerNodeInfo},
+	    ok;
+	ErrorEvent->
+	    NewState=State,
+	    {error,ErrorEvent}
+    end,
     
-    WorkerEvents=[NewWorkerEvent|maps:get(events,Map)],
-    Map2=maps:put(events,WorkerEvents,Map),
-    NewState=State#state{worker_node_info=Map2},
-
     {noreply, NewState};
 
 handle_info(Info, State) ->
