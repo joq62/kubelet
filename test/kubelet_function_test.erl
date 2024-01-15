@@ -13,6 +13,8 @@
 
 -define(Adder,"adder").
 -define(NumWorkers,5).
+-define(TestDeployment,"test_c50").
+
 
 %%%===================================================================
 %%% API
@@ -28,6 +30,7 @@ start()->
     ok=create_cluster(),
     ok=stop_restart_node_test_1(),
     ok=add_applications(),
+    ok=deploy_appl(),
     io:format("Test Suit succeded OK !!! ~p~n",[?MODULE]),
     ok.
     
@@ -39,10 +42,31 @@ start()->
 %% 
 %% @end
 %%--------------------------------------------------------------------
+deploy_appl()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    {ok,HostName}=net:gethostname(),
+    {ok,DeploymentList}=etcd_deployment:get_deployment_list(?TestDeployment),
+    [
+     {ok,"adder",'3_a@c50'},
+     {ok,"adder",'4_a@c50'},
+     {ok,"adder",'5_a@c50'},
+     {ok,"divi",'2_a@c50'},
+     {ok,"divi",'3_a@c50'}
+    ]=lists:sort([kubelet:deploy_application(ApplicationId)||{ApplicationId,HostName}<-DeploymentList]),
+    
+    ApplicationList=[{N,rpc:call(N,application,which_applications,[],5000)}||N<-lists:sort(nodes())],
+    io:format("ApplicationList ~p~n",[{ApplicationList,?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
 add_applications()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     
-    ok=kubelet:deploy_application(?Adder),
+    {ok,"adder",_Node}=kubelet:deploy_application(?Adder),
     
     {ok,AdderApp}=etcd_application:get_app(?Adder),
    

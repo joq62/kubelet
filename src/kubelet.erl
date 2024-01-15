@@ -248,7 +248,7 @@ handle_call({deploy_application,ApplicationId}, _From, State) when State#state.w
 	      {ok,WorkerInfo}->
 		  NewWorkerNodeInfo=lib_workers:update_worker_info(WorkerInfo,State#state.worker_node_info),
 		  NewState=State#state{worker_node_info = NewWorkerNodeInfo},
-		  ok;
+		  {ok,ApplicationId,maps:get(node,WorkerInfo)};
 	      ErrorEvent->
 		  NewState=State,
 		  {error,ErrorEvent}
