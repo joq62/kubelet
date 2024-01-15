@@ -95,9 +95,8 @@ new_worker(WorkerNodeName)->
     {ok,HostName}=net:gethostname(),
     CookieStr=lib_kubelet_cmn:cookie_str(),    
     WorkerDir=lib_kubelet_cmn:worker_dir(WorkerNodeName),
-    file:del_dir_r(WorkerDir),
+    file:del_dir_r(WorkerDir),	
     ok=file:make_dir(WorkerDir),
-
     {ok,WorkerNode}=slave:start(HostName,WorkerNodeName,"-setcookie "++CookieStr),
     pong=net_adm:ping(WorkerNode),
     timer:sleep(500),
@@ -105,9 +104,9 @@ new_worker(WorkerNodeName)->
     {ok,WorkerNode,WorkerDir,WorkerNodeName}.
 
 
+%%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -122,7 +121,8 @@ new_workers([WorkerNodeName|T],Acc) ->
     {ok,WorkerNode,WorkerDir,WorkerNodeName}=new_worker(WorkerNodeName),
     WorkerNodeEvents=[#{id=>WorkerNode,date_time=>{date(),time()},state=>started_worker}],
     WorkerNodeInfo=#{node=>WorkerNode, nodename=>WorkerNodeName, node_dir=>WorkerDir, applications=>[], events=>WorkerNodeEvents},
-    new_workers(T,[WorkerNodeInfo|Acc]).
+    {ok,UpdatedWorkerNodeInfo}=lib_kubelet:start_infra_applications(WorkerNodeInfo),
+    new_workers(T,[UpdatedWorkerNodeInfo|Acc]).
 
 
 %%--------------------------------------------------------------------

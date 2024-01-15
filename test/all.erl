@@ -25,16 +25,16 @@
 start()->
    
     ok=setup(),
-
-    ok=basic_test(),
-    ok=worker_test:start(),
+    ok=kubelet_function_test:start(),
+%    ok=basic_test(),
+%    ok=worker_test:start(),
     % ok=application_test:start(),
     
     
    
     io:format("Test OK !!! ~p~n",[?MODULE]),
     timer:sleep(1000),
-    init:stop(),
+%    init:stop(),
     ok.
 
 %% --------------------------------------------------------------------

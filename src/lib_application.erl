@@ -25,6 +25,8 @@
 %% Application = #{application=>ApplName,app=>App,git_path=>GitPath,event=>ApplicationStatus} 
 deploy(ApplicationId,WorkerNodeInfo)->
 
+    io:format("ApplicationId ~p~n",[{ApplicationId,?MODULE,?FUNCTION_NAME,?LINE}]),
+
     %% 1. check if applications is already started and there is a application dir
     %% 2. git clone the application 
     %% 3. on the worker node: add path to the application ebin and priv dir 
@@ -35,8 +37,6 @@ deploy(ApplicationId,WorkerNodeInfo)->
     WorkerNodeName=maps:get(nodename,WorkerNodeInfo),
     WorkerDir=maps:get(node_dir,WorkerNodeInfo),
     ApplicationDir =lib_kubelet_cmn:application_dir(WorkerDir,ApplicationId),
-  %  io:format("ApplicationDir ~p~n",[{ApplicationDir,?MODULE,?FUNCTION_NAME,?LINE}]),    
-
     false=filelib:is_dir(ApplicationDir),
     
     {ok,App}=etcd_application:get_app(ApplicationId),
@@ -48,7 +48,7 @@ deploy(ApplicationId,WorkerNodeInfo)->
     ok=file:make_dir(ApplicationDir),
     {ok,GitPath}=etcd_application:get_git_path(ApplicationId),
     GitResult=os:cmd("git clone "++GitPath++" "++ApplicationDir),
-    io:format("GitResult ~p~n",[{GitResult,?MODULE,?FUNCTION_NAME,?LINE}]),    
+%    io:format("GitResult ~p~n",[{GitResult,?MODULE,?FUNCTION_NAME,?LINE}]),    
     Ebin=filename:join(ApplicationDir,"ebin"),
     true=filelib:is_dir(Ebin),
     PrivDir=filename:join(ApplicationDir,"priv"),
@@ -70,9 +70,17 @@ deploy(ApplicationId,WorkerNodeInfo)->
     
     ApplicationEvent=#{id=>ApplicationId,date_time=>{date(),time()},status=>started},
     ApplicationInfo2=#{application=>ApplicationId,app=>App,git_path=>GitPath,event=>ApplicationEvent}, 
-    ApplicationInfo=maps:get(applications,WorkerNodeInfo),
-
-    UpdatedWorkerNodeInfo=maps:put(applications,[ApplicationInfo2|ApplicationInfo],WorkerNodeInfo),    
+    ApplicationsMap=maps:get(applications,WorkerNodeInfo),
+%    io:format("ApplicationsMap~p~n",[{ApplicationsMap,?MODULE,?LINE}]),
+    UsortedApplicationsMap=case ApplicationsMap of
+			       []->
+				   [ApplicationInfo2];
+			       _->
+				   M1=[M||M<-ApplicationsMap,
+					    App=/=maps:get(app,M)],
+				   [ApplicationInfo2|M1]
+			   end,
+    UpdatedWorkerNodeInfo=maps:put(applications,UsortedApplicationsMap,WorkerNodeInfo),    
     {ok,UpdatedWorkerNodeInfo}.
  
 

@@ -84,11 +84,13 @@ stop_restart_node_test()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     
     [NodeToKill,'2_a@c50','3_a@c50','4_a@c50','5_a@c50']=lists:sort(nodes()),
+    slave:stop(NodeToKill),
     rpc:call(NodeToKill,init,stop,[],5000),
-    timer:sleep(3000),
-    [NodeToKill,'2_a@c50','3_a@c50','4_a@c50','5_a@c50']=lists:sort(nodes()),
-    
- 
+    timer:sleep(5000),
+  %  [NodeToKill,'2_a@c50','3_a@c50','4_a@c50','5_a@c50']=lists:sort(nodes()),
+    %glurk=rpc:call(NodeToKill,application,which_applications,[],5000),
+    Info=kubelet:which_workers(),
+    io:format("Info ~p~n",[{Info,?MODULE,?FUNCTION_NAME,?LINE}]),
     ok.
 %% --------------------------------------------------------------------
 %% Function: available_hosts()

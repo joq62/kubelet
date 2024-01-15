@@ -312,9 +312,7 @@ handle_cast(UnMatchedSignal, State) ->
 	  {stop, Reason :: normal | term(), NewState :: term()}.
 
 handle_info({nodedown,Node}, State) ->
-    [WorkerNodeInfo]=[R||R<-State#state.worker_node_info,
-			 Node=:=maps:get(node,R)],
-    Result=try lib_kubelet:restart(WorkerNodeInfo) of
+    Result=try lib_kubelet:restart(Node,State#state.worker_node_info) of
 	       {ok,UpdatedCandidateInfo}->
 		   {ok,UpdatedCandidateInfo}
 	   catch
@@ -327,10 +325,13 @@ handle_info({nodedown,Node}, State) ->
 	   end,
     case Result of
 	{ok,WorkerInfo}->
+%	    io:format("WorkerInfo ~p~n",[{WorkerInfo,?MODULE,?LINE}]),
 	    NewWorkerNodeInfo=lib_workers:update_worker_info(WorkerInfo,State#state.worker_node_info),
 	    NewState=State#state{worker_node_info = NewWorkerNodeInfo},
 	    ok;
 	ErrorEvent->
+	    ?LOG_WARNING("ErrorEvent ",[ErrorEvent]),	  
+	  %  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
 	    NewState=State,
 	    {error,ErrorEvent}
     end,

@@ -12,7 +12,8 @@
 
 %% API
 -export([
-	 restart/2
+	 restart/2,
+	 start_infra_applications/1
 	]).
 
 %%%===================================================================
@@ -24,29 +25,27 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
+start_infra_applications(WorkerNodeInfo)->
+    {ok,UpdatedWorkerNodeInfo}=restart_infra_applications(WorkerNodeInfo),
+    {ok,UpdatedWorkerNodeInfo}.
+
+%%--------------------------------------------------------------------
+%% @doc
+%%
+%% @end
+%%--------------------------------------------------------------------
 restart(WorkerNode,WorkerNodeList)->
     [WorkerNodeInfo]=[R||R<-WorkerNodeList,
 			 WorkerNode=:=maps:get(node,R)],
     {ok,UpdatedWorkerNodeInfo1}=restart_node(WorkerNodeInfo),
+   
     {ok,UpdatedWorkerNodeInfo2}=restart_infra_applications(UpdatedWorkerNodeInfo1),
+ 
     {ok,UpdatedWorkerNodeInfo3}=restart_service_applications(UpdatedWorkerNodeInfo2),
+%    io:format("restart_services ~p~n",[{UpdatedWorkerNodeInfo3,?MODULE,?LINE}]),
+    
+    {ok,UpdatedWorkerNodeInfo3}.
 
-    WorkerNode=maps:get(node,WorkerNodeInfo),
-    WorkerNodeName=maps:get(nodename,WorkerNodeInfo),
-    pang=net_adm:ping(WorkerNode),   
-    {ok,WorkerNode,_WorkerDir,WorkerNodeName}=lib_workers:new_worker(WorkerNodeName),
-    pong=net_adm:ping(WorkerNode),
-    NewWorkerEvent=#{id=>WorkerNode,date_time=>{date(),time()},state=>restarted_worker},
-    
-    WorkerEvents=[NewWorkerEvent|maps:get(events,WorkerNodeInfo)],
-    UpdatedWorkerNodeInfo=maps:put(events,WorkerEvents,WorkerNodeInfo),
-    
-    %% Deploy infra applications
-    
-
-    %% Daploy service applications
-    
-    {ok,UpdatedWorkerNodeInfo}.
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
@@ -73,8 +72,7 @@ restart_node(WorkerNodeInfo)->
 %%--------------------------------------------------------------------
 restart_infra_applications(WorkerNodeInfo)->
     WorkerNode=maps:get(node,WorkerNodeInfo),
-    UpdatedWorkerNodeInfo=a,
-  %  fortsätt här med att starta fler applicationer
+    UpdatedWorkerNodeInfo=deploy(?InfraApplications,WorkerNodeInfo),
     {ok,UpdatedWorkerNodeInfo}.
 
 %%--------------------------------------------------------------------
@@ -83,7 +81,20 @@ restart_infra_applications(WorkerNodeInfo)->
 %% @end
 %%--------------------------------------------------------------------
 restart_service_applications(WorkerNodeInfo)->
-    WorkerNode=maps:get(node,WorkerNodeInfo),
-    UpdatedWorkerNodeInfo=a,
-  %  fortsätt här med att starta fler applicationer
+    ApplicationInfo=maps:get(applications,WorkerNodeInfo),
+    AllApplicationIds=[maps:get(application,Map)||Map<-ApplicationInfo],
+    ServiceIds=[ApplicationId||ApplicationId<-AllApplicationIds,
+			       false=:=lists:member(ApplicationId,?InfraApplications)],
+    UpdatedWorkerNodeInfo=deploy(ServiceIds,WorkerNodeInfo),
     {ok,UpdatedWorkerNodeInfo}.
+
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+
+deploy([],WorkerNodeInfo)->
+    WorkerNodeInfo;
+deploy([ApplicationId|T],WorkerNodeInfo)->
+    {ok,NewWorkerNodeInfo}=lib_application:deploy(ApplicationId,WorkerNodeInfo),
+    deploy(T,NewWorkerNodeInfo).    
