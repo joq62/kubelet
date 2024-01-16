@@ -1,1 +1,8 @@
-[].
+[{<<"log">>,
+  {git,"https://github.com/joq62/log.git",
+       {ref,"5347c37caa3c76ab486464389c64f2c2046c50a5"}},
+  0},
+ {<<"resource_discovery">>,
+  {git,"https://github.com/joq62/resource_discovery.git",
+       {ref,"353a4cff1655d5dfe3c0590a8d6616bbe08bf714"}},
+  0}].
