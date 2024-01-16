@@ -39,14 +39,18 @@ deploy(ApplicationId,WorkerNodeInfo)->
     ApplicationDir =lib_kubelet_cmn:application_dir(WorkerDir,ApplicationId),
     false=filelib:is_dir(ApplicationDir),
     
-    {ok,App}=etcd_application:get_app(ApplicationId),
+  %  {ok,App}=etcd_application:get_app(ApplicationId),
+    {ok,App}=rd:call(etcd,etcd_application,get_app,[ApplicationId],5000),
+
     WorkerNode=maps:get(node,WorkerNodeInfo),
     {badrpc,_}=rpc:call(WorkerNode,App,ping,[],5000),
 
     %% 2. git clone the application 
     
     ok=file:make_dir(ApplicationDir),
-    {ok,GitPath}=etcd_application:get_git_path(ApplicationId),
+ %   {ok,GitPath}=etcd_application:get_git_path(ApplicationId),
+    {ok,GitPath}=rd:call(etcd,etcd_application,get_git_path,[ApplicationId],5000),
+
     GitResult=os:cmd("git clone "++GitPath++" "++ApplicationDir),
 %    io:format("GitResult ~p~n",[{GitResult,?MODULE,?FUNCTION_NAME,?LINE}]),    
     Ebin=filename:join(ApplicationDir,"ebin"),
