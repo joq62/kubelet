@@ -28,8 +28,6 @@ start()->
     ok=common_tests(),
     ok=create_which_tests(),
     ok=check_connections(),
-
-    ok=load_start_infra_test(),
     ok=stop_restart_node_test(),
     
     io:format("Test Suit succeded OK !!! ~p~n",[?MODULE]),

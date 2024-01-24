@@ -25,7 +25,6 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     
     
-    ok=log_rd_apps:start(),
     ok=kubelet:start(),
     ok.
     

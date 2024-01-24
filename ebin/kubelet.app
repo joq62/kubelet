@@ -6,6 +6,6 @@
               {applications,[kernel,stdlib]},
               {env,[]},
               {modules,[kubelet,kubelet_app,kubelet_sup,lib_application,
-                        lib_kubelet,lib_kubelet_cmn,lib_workers]},
+                        lib_kubelet,lib_kubelet_cmn,lib_workers,system_boot]},
               {licenses,["Apache-2.0"]},
               {links,[]}]}.

@@ -25,10 +25,9 @@
 start()->
    
     ok=setup(),
-    ok=kubelet_function_test:start(),
-%    ok=basic_test(),
-%    ok=worker_test:start(),
-    % ok=application_test:start(),
+    ok=basic_test(),
+    ok=worker_test:start(),
+    ok=application_test:start(),
     
     
    
@@ -56,10 +55,12 @@ basic_test()->
 
 setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
-    ok=dependent_apps:start(),
+    
+   
+    application:start(kubelet),
+    ok=application:start(etcd),
+    pong=etcd:ping(),
     pong=log:ping(),
     pong=rd:ping(),
-    pong=etcd:ping(),
-    application:start(kubelet),
     pong=kubelet:ping(),
     ok.

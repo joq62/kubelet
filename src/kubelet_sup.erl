@@ -30,10 +30,8 @@ init([]) ->
                  intensity => 0,
                  period => 1},
     ChildSpecs = [
-		  #{id=>rd,
-		    start=>{rd,start_link,[]}},
-		  #{id=>log,
-		    start=>{log,start_link,[]}},
+		  #{id => system_boot,
+                    start => {system_boot,start_link,[]}} ,
 		  #{id=>kubelet,
 		    start=>{kubelet,start_link,[]}}
 		 ],

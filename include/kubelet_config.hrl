@@ -1,0 +1,5 @@
+-define(MainLogDir,"logs").
+-define(LocalLogDir,"log.logs").
+-define(LogFile,"logfile").
+-define(MaxNumFiles,10).
+-define(MaxNumBytes,100000).
