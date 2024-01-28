@@ -196,7 +196,7 @@ eunit:
 	rm -rf *_a;
 	#INFO: Creating eunit test code using test_ebin dir;
 	mkdir test_ebin;
-	cp test/*.app test_ebin;
+	#cp test/*.app test_ebin;
 	#rm test/dependent_apps.erl;
 	#cp /home/joq62/erlang/dev_support/dependent_apps.erl test;
 	erlc -I include -I /home/joq62/erlang/include -o test_ebin test/*.erl;

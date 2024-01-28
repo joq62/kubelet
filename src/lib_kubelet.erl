@@ -71,7 +71,7 @@ restart_node(WorkerNodeInfo)->
 %% @end
 %%--------------------------------------------------------------------
 restart_infra_applications(WorkerNodeInfo)->
-    WorkerNode=maps:get(node,WorkerNodeInfo),
+    _WorkerNode=maps:get(node,WorkerNodeInfo),
     UpdatedWorkerNodeInfo=deploy(?InfraApplications,WorkerNodeInfo),
     {ok,UpdatedWorkerNodeInfo}.
 

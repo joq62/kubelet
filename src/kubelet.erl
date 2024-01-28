@@ -48,7 +48,8 @@
 	 create_workers/1,
 	 which_workers/0,
 	 deploy_application/1,
-	 delete_application/1,
+	 delete_application/2,
+	 remove_application/2,
 	 which_applications/0
 	]).
 -export([
@@ -118,9 +119,19 @@ which_applications()->
 %% Load and start the application ApplicationId on the worker node that has least applications 
 %% @end
 %%--------------------------------------------------------------------
--spec delete_application({ApplicationId :: string(),WorkerNode :: node()})-> ok|{error,Reason :: term()}.
-delete_application({ApplicationId,WorkerNode})-> 
+-spec delete_application(ApplicationId :: string(),WorkerNode :: node())-> ok|{error,Reason :: term()}.
+delete_application(ApplicationId,WorkerNode)-> 
     gen_server:call(?SERVER, {delete_application,ApplicationId,WorkerNode},infinity).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Stop and unload the application ApplicationId on the worker node that has least applications
+%% REmove directory 
+%% @end
+%%--------------------------------------------------------------------
+-spec remove_application(ApplicationId :: string(),WorkerNode :: node())-> ok|{error,Reason :: term()}.
+remove_application(ApplicationId,WorkerNode)-> 
+    gen_server:call(?SERVER, {remove_application,ApplicationId,WorkerNode},infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -226,15 +237,14 @@ handle_call({which_workers}, _From, State) when State#state.worker_node_info == 
 %%  
 %% @end
 %%--------------------------------------------------------------------
-
 handle_call({deploy_application,ApplicationId}, _From, State) when State#state.worker_node_info =/= undefined->
     Result=case lib_workers:get_candidate(State#state.worker_node_info,ApplicationId) of
 	       {error,Reason}->
 		   {error,Reason};
-	       {ok,Candidate}->
-		   try lib_application:deploy(ApplicationId,Candidate) of
-		       {ok,UpdatedCandidateInfo}->
-			   {ok,UpdatedCandidateInfo}
+	       {ok,WorkerInfo}->
+		   try lib_application:deploy(ApplicationId,WorkerInfo) of
+		       {ok,UpdatedWorkerInfo}->
+			   {ok,UpdatedWorkerInfo}
 		   catch
 		       error:Reason:Stacktrace->
 			   {error,Reason,Stacktrace,?MODULE,?LINE};
@@ -245,10 +255,10 @@ handle_call({deploy_application,ApplicationId}, _From, State) when State#state.w
 		   end
 	   end,
     Reply=case Result of
-	      {ok,WorkerInfo}->
-		  NewWorkerNodeInfo=lib_workers:update_worker_info(WorkerInfo,State#state.worker_node_info),
+	      {ok,NewInfo}->
+		  NewWorkerNodeInfo=lib_workers:update_worker_info(NewInfo,State#state.worker_node_info),
 		  NewState=State#state{worker_node_info = NewWorkerNodeInfo},
-		  {ok,ApplicationId,maps:get(node,WorkerInfo)};
+		  {ok,ApplicationId,maps:get(node,NewInfo)};
 	      ErrorEvent->
 		  NewState=State,
 		  {error,ErrorEvent}
@@ -259,6 +269,57 @@ handle_call({deploy_application,ApplicationId}, _From, State) when State#state.w
 handle_call({deploy_application,ApplicationId}, _From, State) when State#state.worker_node_info == undefined->
     Reply={error,["No workers are created yet , you need to call create_workers(NumWorkers) and then it's possible to deploy ",ApplicationId]},
     {reply, Reply, State};
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%%  
+%% @end
+%%--------------------------------------------------------------------
+
+handle_call({remove_application,ApplicationId,WorkerNode}, _From, State) 
+  when State#state.worker_node_info == undefined->
+    
+    Reply={error,["No workers are created yet , you need to call create_workers(NumWorkers) and then it's possible to deploy ",ApplicationId,WorkerNode]},
+    {reply, Reply, State};
+
+handle_call({remove_application,ApplicationId,WorkerNode}, _From, State) 
+  when State#state.worker_node_info =/= undefined->
+    
+    Result=case [M||M<-State#state.worker_node_info,
+		    WorkerNode==maps:get(node,M)] of
+	       []->
+		   {error,["WorkerNode doesnt exists",WorkerNode,?MODULE,?LINE]};
+	       [WorkerNodeInfo]->
+		   ApplicationsList=maps:get(applications,WorkerNodeInfo),
+		   case [A||A<-ApplicationsList,
+			    ApplicationId==maps:get(application,A)] of
+		       []->
+			   {error,["ApplicationId not deployed on the WorkerNode",ApplicationId,WorkerNode,?MODULE,?LINE]};
+		       _->
+			   try lib_application:remove(ApplicationId,WorkerNode,WorkerNodeInfo) of
+			       {ok,R}->
+				   {ok,R}
+			   catch
+			       error:Reason:Stacktrace->
+				   {error,Reason,Stacktrace,?MODULE,?LINE};
+			       throw:Reason:Stacktrace->
+				   {throw,Reason,Stacktrace,?MODULE,?LINE};
+			       Event:Reason:Stacktrace ->
+				   {Event,Reason,Stacktrace,?MODULE,?LINE}
+			   end
+		   end
+	   end,
+    Reply=case Result of
+	      {ok,NewInfo}->
+		  NewWorkerNodeInfo=lib_workers:update_worker_info(NewInfo,State#state.worker_node_info),
+		  NewState=State#state{worker_node_info = NewWorkerNodeInfo},
+		  ok;
+	      ErrorEvent->
+		  NewState=State,
+		  {error,ErrorEvent}
+	  end,
+    {reply, Reply, NewState};  
 
 %%--------------------------------------------------------------------
 %% @doc

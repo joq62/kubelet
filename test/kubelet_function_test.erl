@@ -27,10 +27,12 @@
 %%--------------------------------------------------------------------
 start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+
+    ok=setup(),
     ok=create_cluster(),
     ok=stop_restart_node_test_1(),
     ok=add_applications(),
-    ok=deploy_appl(),
+    ok=deploy_remove_appl(),
     io:format("Test Suit succeded OK !!! ~p~n",[?MODULE]),
     ok.
     
@@ -42,7 +44,7 @@ start()->
 %% 
 %% @end
 %%--------------------------------------------------------------------
-deploy_appl()->
+deploy_remove_appl()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     {ok,HostName}=net:gethostname(),
     {ok,DeploymentList}=etcd_deployment:get_deployment_list(?TestDeployment),
@@ -56,6 +58,32 @@ deploy_appl()->
     
     ApplicationList=[{N,rpc:call(N,application,which_applications,[],5000)}||N<-lists:sort(nodes())],
     io:format("ApplicationList ~p~n",[{ApplicationList,?MODULE,?FUNCTION_NAME,?LINE}]),
+    
+    ApplToRemove="adder",
+    ApplNode='4_a@c50',
+    [
+     {adder,"An OTP application","0.1.0"},
+     {kernel,"ERTS  CXC 138 10","8.2"},
+     {log,"An OTP application","0.1.0"},
+     {rd,"An OTP application","0.1.0"},
+     {stdlib,"ERTS  CXC 138 10","3.17"}
+    ]=lists:sort(rpc:call(ApplNode,application,which_applications,[],5000)),
+   
+    %% Check error cases
+    {error,{error,["ApplicationId not deployed on the WorkerNode","glurk",'4_a@c50',kubelet,_]}}=kubelet:remove_application("glurk",ApplNode),
+    {error,{error,["WorkerNode doesnt exists",'glurk@c50',kubelet,_]}}=kubelet:remove_application(ApplToRemove,glurk@c50),
+    
+    %% Normal case 
+    ok=kubelet:remove_application(ApplToRemove,ApplNode),
+
+    [
+     {kernel,"ERTS  CXC 138 10","8.2"},
+     {log,"An OTP application","0.1.0"},
+     {rd,"An OTP application","0.1.0"},
+     {stdlib,"ERTS  CXC 138 10","3.17"}
+    ]=lists:sort(rpc:call(ApplNode,application,which_applications,[],5000)),
+    {badrpc,_}=rpc:call(ApplNode,list_to_atom(ApplToRemove),ping,[],5000),
+
     ok.
 
 %%--------------------------------------------------------------------
@@ -144,4 +172,20 @@ stop_restart_node_test_1()->
      {rd,"An OTP application","0.1.0"},
      {stdlib,"ERTS  CXC 138 10","3.17"}
     ]=lists:sort(rpc:call(NodeToKill,application,which_applications,[],5000)),
+    ok.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+setup()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+ 
+    application:start(kubelet),
+    ok=application:start(etcd),
+    pong=etcd:ping(),
+    pong=log:ping(),
+    pong=rd:ping(),
+    pong=kubelet:ping(),
     ok.

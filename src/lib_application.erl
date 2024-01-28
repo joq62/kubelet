@@ -10,7 +10,8 @@
 
 %% API
 -export([
-	 deploy/2
+	 deploy/2,
+	 remove/3
 	]).
 
 %%%===================================================================
@@ -86,6 +87,62 @@ deploy(ApplicationId,WorkerNodeInfo)->
 			   end,
     UpdatedWorkerNodeInfo=maps:put(applications,UsortedApplicationsMap,WorkerNodeInfo),    
     {ok,UpdatedWorkerNodeInfo}.
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+%% WorkerNode = #{node=>Node, nodename=>NodeName, node_dir=>NodeDir, applications=>[Application], events=>[WorkerNodeEvents]}
+%% Application = #{application=>ApplName,app=>App,git_path=>GitPath,event=>ApplicationStatus} 
+remove(ApplicationId,WorkerNode,WorkerNodeInfo)->
+
+    io:format("ApplicationId,WorkerNode,WorkerNodeInfo ~p~n",[{ApplicationId,WorkerNode,WorkerNodeInfo,?MODULE,?FUNCTION_NAME,?LINE}]),
+
+    %% 1. Stop and unload Application and delete code path
+    %% 2. Delete Application Dir and stop and unload
+    %% 3. Update NodeInfo
+  
+    %% 1. Stop and unload Application and delete code path
+    {ok,App}=rd:call(etcd,etcd_application,get_app,[ApplicationId],5000),
+    ok=rpc:call(WorkerNode,application,stop,[App],5000),
+    ok=rpc:call(WorkerNode,application,unload,[App],5000),
+
+    WorkerNodeName=maps:get(nodename,WorkerNodeInfo),
+    WorkerDir=maps:get(node_dir,WorkerNodeInfo),
+    ApplicationDir =lib_kubelet_cmn:application_dir(WorkerDir,ApplicationId),
+    Ebin=filename:join(ApplicationDir,"ebin"),
+    PrivDir=filename:join(ApplicationDir,"priv"),
+    DelPatha=case filelib:is_dir(PrivDir) of
+		 false->
+		     [Ebin];
+		 true->
+		     [Ebin,PrivDir]
+	     end,
+    [true]=[rpc:call(WorkerNode,code,del_path,[Path],5000)||Path<-DelPatha],
+    
+    %% 2. Delete Application Dir and stop and unload
+
+    file:del_dir_r(ApplicationDir),
+    false=filelib:is_dir(ApplicationDir),
+    
+    %% 3. Update NodeInfo
+    ApplicationEvent=#{id=>ApplicationId,date_time=>{date(),time()},status=>removed},
+    ApplicationInfo2=#{application=>ApplicationId,app=>not_applicable,git_path=>not_applicable,event=>ApplicationEvent}, 
+    ApplicationsMap=maps:get(applications,WorkerNodeInfo),
+%    io:format("ApplicationsMap~p~n",[{ApplicationsMap,?MODULE,?LINE}]),
+    UsortedApplicationsMap=case ApplicationsMap of
+			       []->
+				   [ApplicationInfo2];
+			       _->
+				   M1=[M||M<-ApplicationsMap,
+					    App=/=maps:get(app,M)],
+				   [ApplicationInfo2|M1]
+			   end,
+    UpdatedWorkerNodeInfo=maps:put(applications,UsortedApplicationsMap,WorkerNodeInfo),    
+    {ok,UpdatedWorkerNodeInfo}.
+
  
 
 
